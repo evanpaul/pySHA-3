@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+# Evan Paul
+# CSCI181
+# An Python implementation of SHA-3
 import numpy as np
+from sys import exit
 # Auxillary routine #1
 # Expands one-dimensional array into three-dimensional array
 def oneToThree(v):
@@ -44,7 +48,7 @@ def theta(ain):
 # Rho
 def rho(ain):
     rhomatrix=[[0,36,3,41,18],[1,44,10,45,2],[62,6,43,15,61],[28,55,25,21,56],[27,20,39,8,14]]
-    rhom = np.array(rhomatrix) # Convert array into numpy's array class (for convenience)
+    rhom = np.array(rhomatrix) # Convert LUT into numpy's array class (for convenience)
     aout = np.zeros((5,5,64)) # Initialize empty 5x5x64 array
 
     for i in range(5):
@@ -57,9 +61,44 @@ def rho(ain):
 # Pi
 def pi(ain):
     aout = np.zeros((5,5,64)) # Initialize empty 5x5x64 array
-    
+
     for i in range(5):
         for j in range(5):
             for k in range(64):
                 aout[j][(2*i+3*j)%5][k] = ain[i][j][k]
+    return aout
+# Chi
+def chi(ain):
+    aout = np.zeros((5,5,64)) # Initialize empty 5x5x64 array
+
+    for i in range(5):
+        for j in range(5):
+            for k in range(64):
+                xor = np.bitwise_xor(ain[(i+1)%5][j][k], 1)
+                mul = xor * (ain[(i+2)%5][j][k])
+                aout[i][j][k] = np.bitwise_xor(ain[i][j][k], mul)
+    return aout
+# Iota
+def iota(ain, rnd):
+    # Initialize empty arrays
+    aout = np.zeros((5,5,64))
+    bit = np.zeros(dtype = int, shape = (5,5,64))
+    rc = np.zeros(dtype = int, shape = 168)
+
+    # Linear Feedback Shift Register
+    w = np.array([1,0,0,0,0,0,0,0], dtype = int)
+    rc[0] = w[0]
+    for i in range(1, 7*24):
+        w = [w[1],w[2],w[3],w[4],w[5],w[6],w[7],(w[0]+w[4]+w[5]+w[6])]
+        rc[i] = w[0]
+    # Calculate bits
+    for l in range(7):
+        q = pow(2, l) - 1
+        t = l + 7*rnd
+        bit[0][0][q] = rc[l + 7*rnd]
+    # Calculate aout
+    for i in range(5):
+        for j in range(5):
+            for k in range(64):
+                aout[i][j][k] = np.bitwise_xor(ain[i][j][k], bit[i][j][k])
     return aout
