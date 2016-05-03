@@ -7,7 +7,7 @@ from sys import exit
 # Auxillary routine #1
 # Expands one-dimensional array into three-dimensional array
 def oneToThree(v):
-    a = np.zeros((5, 5, 64)) # Initialize empty 5x5x64 array
+    a = np.zeros((5, 5, 64), dtype = int) # Initialize empty 5x5x64 array
     for i in range(5):
         for j in range(5):
             for k in range(64):
@@ -16,7 +16,7 @@ def oneToThree(v):
 # Auxillary routine #2
 # Collapses three-dimensional array into one-dimensional array
 def threeToOne(a):
-    v = np.zeros(1600) # Initialize empty array of size 1600
+    v = np.zeros(1600, dtype = int) # Initialize empty array of size 1600
     for i in range(5):
         for j in range(5):
             for k in range(64):
@@ -38,7 +38,7 @@ def thetaHelper(ain, i, j, k):
     return np.bitwise_xor(first, second)
 # Theta
 def theta(ain):
-    aout = np.zeros((5, 5, 64)) # Initialize empty 5x5x64 array
+    aout = np.zeros((5, 5, 64), dtype = int) # Initialize empty 5x5x64 array
     for i in range(5):
         for j in range(5):
             for k in range(64):
@@ -48,19 +48,18 @@ def theta(ain):
 # Rho
 def rho(ain):
     rhomatrix=[[0,36,3,41,18],[1,44,10,45,2],[62,6,43,15,61],[28,55,25,21,56],[27,20,39,8,14]]
-    rhom = np.array(rhomatrix) # Convert LUT into numpy's array class (for convenience)
-    aout = np.zeros((5,5,64)) # Initialize empty 5x5x64 array
+    rhom = np.array(rhomatrix, dtype=int) # Convert LUT into numpy's array class (for convenience)
+    aout = np.zeros((5,5,64), dtype = int) # Initialize empty 5x5x64 array
 
     for i in range(5):
         for j in range(5):
             for k in range(64):
                 select = rhom[i][j] # Use lookup table to "calculate" (t + 1)(t + 2)/2
                 aout[i][j][k] = ain[i][j][k - select]
-
     return aout
 # Pi
 def pi(ain):
-    aout = np.zeros((5,5,64)) # Initialize empty 5x5x64 array
+    aout = np.zeros((5,5,64), dtype = int) # Initialize empty 5x5x64 array
 
     for i in range(5):
         for j in range(5):
@@ -69,7 +68,7 @@ def pi(ain):
     return aout
 # Chi
 def chi(ain):
-    aout = np.zeros((5,5,64)) # Initialize empty 5x5x64 array
+    aout = np.zeros((5,5,64), dtype = int) # Initialize empty 5x5x64 array
 
     for i in range(5):
         for j in range(5):
@@ -81,7 +80,7 @@ def chi(ain):
 # Iota
 def iota(ain, rnd):
     # Initialize empty arrays
-    aout = np.zeros((5,5,64))
+    aout = np.zeros((5,5,64), dtype = int)
     bit = np.zeros(dtype = int, shape = (5,5,64))
     rc = np.zeros(dtype = int, shape = 168)
 
@@ -89,7 +88,10 @@ def iota(ain, rnd):
     w = np.array([1,0,0,0,0,0,0,0], dtype = int)
     rc[0] = w[0]
     for i in range(1, 7*24):
-        w = [w[1],w[2],w[3],w[4],w[5],w[6],w[7],(w[0]+w[4]+w[5]+w[6])]
+        a = np.bitwise_xor(w[0], w[4])
+        b = np.bitwise_xor(w[5], w[6])
+        tail = np.bitwise_xor(a, b)
+        w = [w[1],w[2],w[3],w[4],w[5],w[6],w[7], tail]
         rc[i] = w[0]
     # Calculate bits
     for l in range(7):
@@ -102,3 +104,24 @@ def iota(ain, rnd):
             for k in range(64):
                 aout[i][j][k] = np.bitwise_xor(ain[i][j][k], bit[i][j][k])
     return aout
+
+
+# SHA-3 algorithm
+def sha3(pt, padding = True):
+    l = len(pt)
+
+    # Convert to numpy format and resize
+    v = np.array(pt, dtype = int)
+    v.resize(1600)
+
+    if padding:
+        if l > 1086:
+            sys.exit("Input must be less than or equal to 1086 bits")
+        v[l] = 1
+        v[1087] = 1
+
+    a = oneToThree(v)
+    for rounds in range(24):
+        a = iota(chi(pi(rho(theta(a)))), rounds)
+
+    return threeToOne(a)
